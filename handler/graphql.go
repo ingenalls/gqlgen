@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/99designs/gqlgen/complexity"
 	"github.com/99designs/gqlgen/graphql"
@@ -25,15 +26,16 @@ type params struct {
 }
 
 type Config struct {
-	cacheSize            int
-	upgrader             websocket.Upgrader
-	recover              graphql.RecoverFunc
-	errorPresenter       graphql.ErrorPresenterFunc
-	resolverHook         graphql.FieldMiddleware
-	requestHook          graphql.RequestMiddleware
-	tracer               graphql.Tracer
-	complexityLimit      int
-	disableIntrospection bool
+	cacheSize                  int
+	upgrader                   websocket.Upgrader
+	recover                    graphql.RecoverFunc
+	errorPresenter             graphql.ErrorPresenterFunc
+	resolverHook               graphql.FieldMiddleware
+	requestHook                graphql.RequestMiddleware
+	tracer                     graphql.Tracer
+	complexityLimit            int
+	disableIntrospection       bool
+	websocketKeepAliveInterval time.Duration
 }
 
 func (c *Config) newRequestContext(es graphql.ExecutableSchema, doc *ast.QueryDocument, op *ast.OperationDefinition, query string, variables map[string]interface{}) *graphql.RequestContext {
@@ -76,6 +78,14 @@ type Option func(cfg *Config)
 func WebsocketUpgrader(upgrader websocket.Upgrader) Option {
 	return func(cfg *Config) {
 		cfg.upgrader = upgrader
+	}
+}
+
+// WebsocketKeepAliveInterval is used to set how often the socket should ping the client to make sure the connection stays open
+// Default is 0, which means do not ping client
+func WebsocketKeepAliveInterval(interval time.Duration) Option {
+	return func(cfg *Config) {
+		cfg.websocketKeepAliveInterval = interval
 	}
 }
 
