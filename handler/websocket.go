@@ -15,6 +15,7 @@ import (
 	"github.com/vektah/gqlparser/ast"
 	"github.com/vektah/gqlparser/gqlerror"
 	"github.com/vektah/gqlparser/validator"
+	"time"
 )
 
 const (
@@ -108,7 +109,26 @@ func (c *wsConnection) write(msg *operationMessage) {
 	c.mu.Unlock()
 }
 
+func (c *wsConnection) pingOnInterval(ctx context.Context) {
+	ticker := time.NewTicker(c.cfg.websocketKeepAliveInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			c.conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(10*time.Second))
+		case <-ctx.Done():
+			return
+
+		}
+	}
+}
+
 func (c *wsConnection) run() {
+	if c.cfg.websocketKeepAliveInterval != 0 {
+		go c.pingOnInterval(c.ctx)
+	}
+
 	for {
 		message := c.readOp()
 		if message == nil {
